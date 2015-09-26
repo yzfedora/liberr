@@ -1,22 +1,26 @@
 #define _DEFAULT_SOURCE		/* vsyslog() */
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <errno.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
 #include <syslog.h>
+#include "err_handler.h"
 
 #define call_err_internal(doexit, doerr, msg)		\
 	do {						\
 		va_list ap;				\
 		va_start(ap, msg);			\
 		err_internal(doexit, doerr, msg, ap);	\
-		va_end(ap);				\		
+		va_end(ap);				\
 	} while (0)
 
 static int debug = 0;
 static int daemon = 0;
 
-static void err_internal(bool doexit, bool doerr, char *msg, va_list ap)
+
+static void err_internal(bool doexit, bool doerr,
+		const char *msg, va_list ap)
 {
 	/* Prevent errno be modified in a asynchronous signal handler. */
 	int __errno = errno;
@@ -36,8 +40,10 @@ static void err_internal(bool doexit, bool doerr, char *msg, va_list ap)
 		syslog(LOG_DEBUG, buf);
 	else
 		fprintf(stderr, buf);
+
 	if (doexit)
 		exit(EXIT_FAILURE);
+
 }
 
 void err_dbg(const char *msg, ...)
@@ -48,27 +54,30 @@ void err_dbg(const char *msg, ...)
 	call_err_internal(false, false, msg);
 }
 
-void err_msg(const char *msg)
+void err_msg(const char *msg, ...)
 {
 	call_err_internal(false, false, msg);
 }
 
-void err_sys(const char *msg)
+void err_sys(const char *msg, ...)
 {
 	call_err_internal(false, true, msg);
 }
 
-void err_exit(const char *msg)
+void err_exit(const char *msg, ...)
 {
 	call_err_internal(true, true, msg);
+	/* Force to tell compiler this is 'noreturn', because of in the macro
+	 * 'call_err_internal', the first argument 'doexit' is true. */
+	__builtin_unreachable();
 }
 
-void err_init(void) __attribute__((constructor))
+__attribute__((constructor)) void err_init(void)
 {
 	printf("executing err_init\n");
 }
 
-void err_fini(void) __attribute__((destructor))
+__attribute__((destructor)) void err_fini(void)
 {
 	printf("executing err_fini\n");
 }

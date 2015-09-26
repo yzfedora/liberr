@@ -2,9 +2,12 @@ CC	= gcc
 CFLAGS	= -c -fPIC -O3 -Wall
 LDFLAGS	= -shared
 TARGET	= liberr.so
-SRCS	= err_handler.c
+OBJS	= err_handler.o
 HEADERS = err_handler.h
-OBJS	= $(SRCS: .c=.o)
+
+# BE CARE FOR USE THIS. NO ANY SPACE IN THE BRACKETS.
+# SRCS	= err_handler.c
+# OBJS	= $(SRCS:.c=.o)
 
 .PHONY: ALL clean install uninstall
 ALL: $(TARGET)
@@ -15,7 +18,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) $^
 
 clean:
-	$(RM) $(TARGET) $(OBJS) $(wildcard *.gch)
+	$(RM) $(TARGET) $(OBJS) $(wildcard *.h.gch)
 
 install:
 	cp $(TARGET) /usr/lib/
