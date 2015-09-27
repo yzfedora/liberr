@@ -24,6 +24,9 @@
 #include "err_handler.h"
 
 #define ERR_BUFFER	1024
+#define COLOR_RST	"\e[0m"		/* Reset color of terminal. */
+#define COLOR_RED	"\e[31m"	/* Set red font. */
+
 #define call_err_internal(doexit, doerr, level, msg)		\
 	do {							\
 		va_list ap;					\
@@ -48,15 +51,19 @@ void err_setdaemon(bool flags)
 	else		_err_daemon = 0;
 }
 
-__attribute__((constructor)) void err_init(void)
+__attribute__((constructor(255))) void err_init(void)
 {
 	_err_tty = isatty(STDERR_FILENO);
 	openlog(NULL, LOG_NDELAY | LOG_PID, LOG_USER);
 }
 
-__attribute__((destructor)) void err_fini(void)
+__attribute__((destructor(255))) void err_fini(void)
 {
 	closelog();
+	/* ERROR FOR USE sizeof(COLOR_RST) */
+	if (write(STDERR_FILENO, COLOR_RST, sizeof(COLOR_RST) - 1) !=
+			(sizeof(COLOR_RST) - 1))
+		err_sys("liberr set color to default error");
 }
 
 static void err_internal(bool doexit, bool doerr, int level,
@@ -69,7 +76,7 @@ static void err_internal(bool doexit, bool doerr, int level,
 
 	/* If print the errno, set the color of fonts to red. */
 	if (likely(doerr && _err_tty)) {
-		strncpy(buf, "\e[31m", sizeof(buf));
+		strncpy(buf, COLOR_RED, sizeof(buf));
 		len += 5;
 	}
 
@@ -90,7 +97,7 @@ static void err_internal(bool doexit, bool doerr, int level,
 	/* Set terminal mode to default. */
 	if (likely(doerr && _err_tty)) {
 		len += 1;
-		strncat(buf + len, "\e[0m", sizeof(buf) - len);
+		strncat(buf + len, COLOR_RST, sizeof(buf) - len);
 	}
 
 	if (unlikely(_err_daemon))
