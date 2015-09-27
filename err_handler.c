@@ -24,12 +24,12 @@
 #include "err_handler.h"
 
 #define ERR_BUFFER	1024
-#define call_err_internal(doexit, doerr, msg)		\
-	do {						\
-		va_list ap;				\
-		va_start(ap, msg);			\
-		err_internal(doexit, doerr, msg, ap);	\
-		va_end(ap);				\
+#define call_err_internal(doexit, doerr, level, msg)		\
+	do {							\
+		va_list ap;					\
+		va_start(ap, msg);				\
+		err_internal(doexit, doerr, level, msg, ap);	\
+		va_end(ap);					\
 	} while (0)
 
 static int _err_debug = 0;
@@ -59,7 +59,7 @@ __attribute__((destructor)) void err_fini(void)
 	closelog();
 }
 
-static void err_internal(bool doexit, bool doerr,
+static void err_internal(bool doexit, bool doerr, int level,
 		const char *msg, va_list ap)
 {
 	/* Prevent errno be modified in a asynchronous signal handler. */
@@ -68,7 +68,7 @@ static void err_internal(bool doexit, bool doerr,
 	char buf[ERR_BUFFER];
 
 	/* If print the errno, set the color of fonts to red. */
-	if (likely(_err_tty && doerr)) {
+	if (likely(doerr && _err_tty)) {
 		strncpy(buf, "\e[31m", sizeof(buf));
 		len += 5;
 	}
@@ -76,7 +76,7 @@ static void err_internal(bool doexit, bool doerr,
 	vsnprintf(buf + len, sizeof(buf) - len, msg, ap);
 	
 	/* Append ": " and error string to the end of 'buf'. */
-	if (likely(doerr)) {
+	if (likely(doerr && __errno)) {
 		len = strlen(buf);
 		strncat(buf + len, ": ", sizeof(buf) - len);
 		len += 2;
@@ -88,43 +88,42 @@ static void err_internal(bool doexit, bool doerr,
 	strncat(buf + len, "\n", sizeof(buf) - len);
 
 	/* Set terminal mode to default. */
-	if (likely(_err_tty && doerr)) {
+	if (likely(doerr && _err_tty)) {
 		len += 1;
 		strncat(buf + len, "\e[0m", sizeof(buf) - len);
 	}
 
 	if (unlikely(_err_daemon))
-		syslog(LOG_DEBUG, buf);
+		syslog(level, buf);
 	else
 		fprintf(stderr, buf);
 
 	/* 'doexit' is true, used by err_exit(). */
 	if (doexit)
 		exit(EXIT_FAILURE);
-
 }
 
 void err_dbg(const char *msg, ...)
 {
-	if (!_err_debug)
+	if (likely(!_err_debug))
 		return;
 
-	call_err_internal(false, false, msg);
+	call_err_internal(false, false, LOG_DEBUG, msg);
 }
 
 void err_msg(const char *msg, ...)
 {
-	call_err_internal(false, false, msg);
+	call_err_internal(false, false, LOG_INFO, msg);
 }
 
 void err_sys(const char *msg, ...)
 {
-	call_err_internal(false, true, msg);
+	call_err_internal(false, true, LOG_ERR, msg);
 }
 
 void err_exit(const char *msg, ...)
 {
-	call_err_internal(true, true, msg);
+	call_err_internal(true, true, LOG_ERR, msg);
 	/* Force to tell compiler this is 'noreturn', because of in the macro
 	 * 'call_err_internal', the first argument 'doexit' is true. */
 	__builtin_unreachable();

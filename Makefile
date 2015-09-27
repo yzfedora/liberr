@@ -1,10 +1,10 @@
-CC	= gcc
-CFLAGS	= -c -fPIC -O3 -Wall
-LDFLAGS	= -shared
-TARGET	= liberr.so
-OBJS	= err_handler.o
-HEADERS = err_handler.h
-PROGS	= test
+CC	:= gcc
+CFLAGS	:= -c -fPIC -O3 -Wall
+LDFLAGS	:= -shared
+TARGET	:= liberr.so
+OBJS	:= err_handler.o
+HEADERS := err_handler.h
+PROGS	:= test
 
 # BE CARE FOR USE THIS. NO ANY SPACE IN THE BRACKETS.
 # SRCS	= err_handler.c
@@ -15,8 +15,10 @@ ALL: $(TARGET) $(PROGS)
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
+
 %.o: %.c %.h
 	$(CC) $(CFLAGS) $^
+
 $(PROGS): $(PROGS:=.c)
 	$(CC) -o $@ $^ -Wall -lerr
 

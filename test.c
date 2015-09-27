@@ -27,7 +27,7 @@ int main(void)
 	err_setdebug(true);
 
 	/* You can using journal -n 50 to display the syslog message. */
-	/* err_setdaemon(true); */
+	err_setdaemon(true);
 	err_dbg("This is debug test");
 	err_msg("process %ld start to execute wiat() without any child",
 			(long)getpid());
