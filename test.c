@@ -13,25 +13,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *************************************************************************/
-#ifndef _ERR_HANDLER_H
-#define _ERR_HANDLER_H
-#include <errno.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <err_handler.h>
 
-#ifdef __GNUC__
-#define likely(x)	__builtin_expect((x), 1)
-#define unlikely(x)	__builtin_expect((x), 0)
-#else
-#define likely(x)	(x)
-#define unlikely(x)	(x)
-#endif
+int main(void)
+{
+	pid_t pid;
+	int status;
 
-typedef enum { false = 0, true = 1 } bool;
+	/* For developer to print more message for debug. */
+	err_setdebug(true);
 
-void err_setdebug(bool flags);
-void err_setdaemon(bool flags);
-void err_dbg(const char *msg, ...) __attribute__((format(printf, 1, 2)));
-void err_msg(const char *msg, ...) __attribute__((format(printf, 1, 2)));
-void err_sys(const char *msg, ...) __attribute__((format(printf, 1, 2)));
-void err_exit(const char *msg, ...) __attribute__((noreturn,
-			format(printf, 1, 2)));
-#endif
+	/* You can using journal -n 50 to display the syslog message. */
+	/* err_setdaemon(true); */
+	err_dbg("This is debug test");
+	err_msg("process %ld start to execute wiat() without any child",
+			(long)getpid());
+	if ((pid = wait(&status)) == -1)
+		err_exit("wait");
+	return 0;
+}
