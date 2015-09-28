@@ -13,19 +13,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *************************************************************************/
+#define	LIBERR_TEST		/* For liberr stop and cont test. */
 #define _DEFAULT_SOURCE		/* vsyslog() */
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <string.h>
 #include <syslog.h>
 #include "err_handler.h"
 
+#ifdef	LIBERR_TEST
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
+
+
 #define ERR_BUFFER	1024
 #define COLOR_RST	"\e[0m"		/* Reset color of terminal. */
 #define COLOR_RED	"\e[31m"	/* Set red font. */
+
+
+#ifdef	LIBERR_TEST
+#define	TEST_OUT	"test.out"
+#define	TEST_SYM_TSTP	"#TSTP#"
+#define TEST_SYM_CONT	"#CONT#"
+#endif
 
 #define call_err_internal(doexit, doerr, level, msg)		\
 	do {							\
@@ -35,9 +50,19 @@
 		va_end(ap);					\
 	} while (0)
 
+/* For valid set color of terminal */
+#define DO_COLOR_SET (!_err_daemon && _err_tty)
+/* The 'x' is a macro in the one of COLOR_*. */
+#define COLOR_SET(x) (write(STDERR_FILENO, x, sizeof(x) - 1) != (sizeof(x) - 1))
+
 static int _err_debug = 0;
 static int _err_daemon = 0;
 static int _err_tty = 0;
+
+#ifdef	LIBERR_TEST
+static int tstp_received;
+static int cont_received;
+#endif
 
 void err_setdebug(bool flags)
 {
@@ -51,19 +76,101 @@ void err_setdaemon(bool flags)
 	else		_err_daemon = 0;
 }
 
-__attribute__((constructor(255))) void err_init(void)
-{
-	_err_tty = isatty(STDERR_FILENO);
-	openlog(NULL, LOG_NDELAY | LOG_PID, LOG_USER);
-}
-
+/* Do some cleanup when program exit normally, this mean not killed by signal */
 __attribute__((destructor(255))) void err_fini(void)
 {
+#ifdef	LIBERR_TEST
+	char buf[32];
+	size_t len;
+	int fd = open(TEST_OUT, O_WRONLY | O_CREAT | O_TRUNC, 0640);
+	if (fd == -1) {
+		err_sys("open %s for write test statistics", TEST_OUT);
+		goto out;
+	}
+	snprintf(buf, 32, "%d %d", tstp_received, cont_received);
+	len = strlen(buf);
+	if (write(fd, buf, len) != len) {
+		err_sys("write test statistics to %s", TEST_OUT);
+		goto out;
+	}
+out:
+	if (fd > 0)
+		close(fd);
+#endif
 	closelog();
-	/* ERROR FOR USE sizeof(COLOR_RST) */
-	if (write(STDERR_FILENO, COLOR_RST, sizeof(COLOR_RST) - 1) !=
-			(sizeof(COLOR_RST) - 1))
-		err_sys("liberr set color to default error");
+	/* Reset color of font in the terminal */
+	if (DO_COLOR_SET) {
+		if (COLOR_SET(COLOR_RST))
+			err_sys("liberr restore color to default error");
+	}
+}
+
+/* This situation is program killed by signall, do some cleanup. */
+static void err_general_sighandler(int signo)
+{
+	err_fini();
+	raise(signo);
+}
+
+static void err_sigtstp_handler(int signo)
+{
+	if (DO_COLOR_SET) {
+		if (COLOR_SET(COLOR_RST))
+			err_sys("liberr restore color to default error");
+	}
+#ifdef	LIBERR_TEST
+	tstp_received++;
+	if (COLOR_SET(TEST_SYM_TSTP));
+#endif
+	raise(SIGSTOP);
+}
+
+static void err_sigcont_handler(int signo)
+{
+	if (DO_COLOR_SET) {
+		if (COLOR_SET(COLOR_RED))
+			err_sys("liberr restore color to red error");
+	}
+
+	/* Use to test the restore the color, when program received the signal
+	 * SIGTSTP or SIGCONT, because may couldn't output a entire error when
+	 * signal arrived (which start with: \e[31m and end with \e[0m). */
+#ifdef	LIBERR_TEST
+	cont_received++;
+	if (COLOR_SET(TEST_SYM_CONT));
+#endif
+}
+
+__attribute__((constructor(255))) void err_init(void)
+{
+	struct sigaction act, oact;
+	
+	_err_tty = isatty(STDERR_FILENO);
+	openlog(NULL, LOG_NDELAY | LOG_PID, LOG_USER);
+
+	sigemptyset(&act.sa_mask);
+	act.sa_handler = err_general_sighandler;
+	act.sa_flags = SA_RESETHAND;
+	if (sigaction(SIGHUP, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGHUP error");
+	if (sigaction(SIGINT, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGINT error");
+	if (sigaction(SIGQUIT, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGQUIT error");
+	if (sigaction(SIGABRT, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGABRT error");
+	if (sigaction(SIGSEGV, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGSEGV error");
+	if (sigaction(SIGTERM, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGTERM error");
+	
+	act.sa_handler = err_sigtstp_handler;
+	act.sa_flags = 0;
+	if (sigaction(SIGTSTP, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGTSTP error");
+	act.sa_handler = err_sigcont_handler;
+	if (sigaction(SIGCONT, &act, &oact) == -1)
+		err_sys("liberr set signal handler for SIGCONT error");
 }
 
 static void err_internal(bool doexit, bool doerr, int level,
@@ -74,16 +181,14 @@ static void err_internal(bool doexit, bool doerr, int level,
 	size_t len = 0;		/* For optimize times of call strlen() */
 	char buf[ERR_BUFFER];
 
-	/* If print the errno, set the color of fonts to red. */
-	if (likely(doerr && _err_tty)) {
+	if (doerr && DO_COLOR_SET) {
 		strncpy(buf, COLOR_RED, sizeof(buf));
-		len += 5;
+		len += sizeof(COLOR_RED) - 1;
 	}
 
 	vsnprintf(buf + len, sizeof(buf) - len, msg, ap);
-	
 	/* Append ": " and error string to the end of 'buf'. */
-	if (likely(doerr && __errno)) {
+	if (doerr && __errno) {
 		len = strlen(buf);
 		strncat(buf + len, ": ", sizeof(buf) - len);
 		len += 2;
@@ -91,28 +196,25 @@ static void err_internal(bool doexit, bool doerr, int level,
 	}
 
 	/* Append "\n" to the end of 'buf'. */
-	len = strlen(buf);
+	len += strlen(buf + len);
 	strncat(buf + len, "\n", sizeof(buf) - len);
+	len += 1;
 
-	/* Set terminal mode to default. */
-	if (likely(doerr && _err_tty)) {
-		len += 1;
+	if (doerr && DO_COLOR_SET)
 		strncat(buf + len, COLOR_RST, sizeof(buf) - len);
-	}
 
-	if (unlikely(_err_daemon))
-		syslog(level, buf);
-	else
+	if (!_err_daemon)
 		fprintf(stderr, buf);
+	else
+		syslog(level, buf);
 
-	/* 'doexit' is true, used by err_exit(). */
 	if (doexit)
 		exit(EXIT_FAILURE);
 }
 
 void err_dbg(const char *msg, ...)
 {
-	if (likely(!_err_debug))
+	if (!_err_debug)
 		return;
 
 	call_err_internal(false, false, LOG_DEBUG, msg);

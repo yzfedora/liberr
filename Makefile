@@ -4,7 +4,7 @@ LDFLAGS	:= -shared
 TARGET	:= liberr.so
 OBJS	:= err_handler.o
 HEADERS := err_handler.h
-PROGS	:= test
+PROGS	:= test pression_test sigtstp_test
 
 # BE CARE FOR USE THIS. NO ANY SPACE IN THE BRACKETS.
 # SRCS	= err_handler.c
@@ -19,7 +19,7 @@ $(TARGET): $(OBJS)
 %.o: %.c %.h
 	$(CC) $(CFLAGS) $^
 
-$(PROGS): $(PROGS:=.c)
+%: %.c
 	$(CC) -o $@ $^ -Wall -lerr
 
 clean:
