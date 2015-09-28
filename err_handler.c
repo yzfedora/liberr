@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *************************************************************************/
-#define	LIBERR_TEST		/* For liberr stop and cont test. */
+/* #define	LIBERR_TEST */	/* For liberr stop and cont test. */
 #define _DEFAULT_SOURCE		/* vsyslog() */
 #include <stdio.h>
 #include <errno.h>
@@ -74,6 +74,13 @@ void err_setdaemon(bool flags)
 {
 	if (flags)	_err_daemon = 1;
 	else		_err_daemon = 0;
+}
+
+void err_setout(int fd)
+{
+	if (dup2(fd, STDERR_FILENO) == -1)
+		err_sys("liberr redirect stderr");
+	_err_tty = isatty(STDERR_FILENO);
 }
 
 /* Do some cleanup when program exit normally, this mean not killed by signal */

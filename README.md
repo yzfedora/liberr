@@ -13,6 +13,13 @@
 	+-------------------------------+------------+----------+-----------+
 	| err_exit(const char *msg, ...)|    YES     |   exit   |  SYS_ERR  |
 	+-------------------------------+------------+----------+-----------+
+	| err_setdebug(bool flags)      |  if true, output the debug info   |
+	+-------------------------------+------------+----------+-----------+
+	| err_setdaemon(bool flags)     |  if true, output  all to  syslog  |
+	+-------------------------------+------------+----------+-----------+
+	| err_setout(int fd)            |  redirect   stderr  to  the  'fd' | 
+	+-------------------------------+------------+----------+-----------+
+
 
 # Notice
 	When you're using the some functions like 'pthread_create', I

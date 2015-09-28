@@ -30,6 +30,7 @@ typedef enum { false = 0, true = 1 } bool;
 
 void err_setdebug(bool flags);
 void err_setdaemon(bool flags);
+void err_setout(int fd);
 void err_dbg(const char *msg, ...) __attribute__((format(printf, 1, 2)));
 void err_msg(const char *msg, ...) __attribute__((format(printf, 1, 2)));
 void err_sys(const char *msg, ...) __attribute__((format(printf, 1, 2)));
