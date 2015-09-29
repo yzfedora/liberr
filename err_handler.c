@@ -83,7 +83,9 @@ void err_setout(int fd)
 	_err_tty = isatty(STDERR_FILENO);
 }
 
-/* Do some cleanup when program exit normally, this mean not killed by signal */
+/* 
+ * Do some cleanup when program exit normally, this mean not killed by signal.
+ */
 __attribute__((destructor(255))) void err_fini(void)
 {
 #ifdef	LIBERR_TEST
@@ -105,6 +107,7 @@ out:
 		close(fd);
 #endif
 	closelog();
+
 	/* Reset color of font in the terminal */
 	if (DO_COLOR_SET) {
 		if (COLOR_SET(COLOR_RST))
@@ -112,13 +115,18 @@ out:
 	}
 }
 
-/* This situation is program killed by signall, do some cleanup. */
+/*
+ * This situation is program killed by signal, do some cleanup.
+ */
 static void err_general_sighandler(int signo)
 {
 	err_fini();
 	raise(signo);
 }
 
+/*
+ * liberr caught signal of stop, ensure color set to default.
+ */
 static void err_sigtstp_handler(int signo)
 {
 	if (DO_COLOR_SET) {
@@ -132,6 +140,10 @@ static void err_sigtstp_handler(int signo)
 	raise(SIGSTOP);
 }
 
+/*
+ * liberr awake by signal of continue, ensure color is set to red. (for
+ * err_sys() and err_exit() special)
+ */
 static void err_sigcont_handler(int signo)
 {
 	if (DO_COLOR_SET) {
@@ -139,9 +151,11 @@ static void err_sigcont_handler(int signo)
 			err_sys("liberr restore color to red error");
 	}
 
-	/* Use to test the restore the color, when program received the signal
+	/* 
+	 * Use to test the restore the color, when program received the signal
 	 * SIGTSTP or SIGCONT, because may couldn't output a entire error when
-	 * signal arrived (which start with: \e[31m and end with \e[0m). */
+	 * signal arrived (which start with: \e[31m and end with \e[0m).
+	 */
 #ifdef	LIBERR_TEST
 	cont_received++;
 	if (COLOR_SET(TEST_SYM_CONT));
@@ -183,8 +197,8 @@ __attribute__((constructor(255))) void err_init(void)
 static void err_internal(bool doexit, bool doerr, int level,
 		const char *msg, va_list ap)
 {
-	/* Prevent errno be modified in a asynchronous signal handler. */
-	int __errno = errno;
+	int __errno = errno;	/* Saved for asynchronous signal handler. */
+
 	size_t len = 0;		/* For optimize times of call strlen() */
 	char buf[ERR_BUFFER];
 
@@ -240,7 +254,9 @@ void err_sys(const char *msg, ...)
 void err_exit(const char *msg, ...)
 {
 	call_err_internal(true, true, LOG_ERR, msg);
-	/* Force to tell compiler this is 'noreturn', because of in the macro
-	 * 'call_err_internal', the first argument 'doexit' is true. */
+	/* 
+	 * Force to tell compiler this is 'noreturn', because of in the macro
+	 * 'call_err_internal', the first argument 'doexit' is true.
+	 */
 	__builtin_unreachable();
 }
