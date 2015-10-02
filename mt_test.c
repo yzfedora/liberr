@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <err_handler.h>
 
-#define	MT_TEST_OUT	"mt_test.out"
+#define MT_TEST_OUT	"mt_test.out"
 #define LITTER_RANGE	('z' - 'A')
 #define ERRNO_MAX	132
 

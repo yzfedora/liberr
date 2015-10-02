@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *************************************************************************/
-/* #define	LIBERR_TEST */	/* For liberr stop and cont test. */
+/* #define LIBERR_TEST */	/* For liberr stop and cont test. */
 #define _DEFAULT_SOURCE		/* vsyslog() */
 #include <stdio.h>
 #include <errno.h>
@@ -26,8 +26,8 @@
 #include "err_handler.h"
 
 #ifdef	LIBERR_TEST
-#include <sys/stat.h>
-#include <fcntl.h>
+# include <sys/stat.h>
+# include <fcntl.h>
 #endif
 
 
@@ -37,9 +37,9 @@
 
 
 #ifdef	LIBERR_TEST
-#define	TEST_OUT	"test.out"
-#define	TEST_SYM_TSTP	"#TSTP#"
-#define TEST_SYM_CONT	"#CONT#"
+# define TEST_OUT	"test.out"
+# define TEST_SYM_TSTP	"#TSTP#"
+# define TEST_SYM_CONT	"#CONT#"
 #endif
 
 #define call_err_internal(doexit, doerr, level, msg)		\

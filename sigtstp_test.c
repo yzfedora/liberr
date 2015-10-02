@@ -38,9 +38,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define	TEST_OUT	"test.out"
-#define	TEST_TMP	"test.tmp"
-#define	LINE		1024
+#define TEST_OUT	"test.out"
+#define TEST_TMP	"test.tmp"
+#define LINE		1024
 
 /*
  * This is our error process macros, used in test.
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 	} else if (pid == 0) {
 		int out;
 
-#define	OPEN_FLAGS	(O_RDWR | O_CREAT | O_TRUNC)
+#define OPEN_FLAGS	(O_RDWR | O_CREAT | O_TRUNC)
 		if ((out = open(TEST_TMP, OPEN_FLAGS, 0640)) == -1)
 			err_exit("open");
 		if (dup2(out, STDERR_FILENO) == -1)
