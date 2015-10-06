@@ -24,11 +24,11 @@ int main(void)
 	int status;
 
 	/* For developer to print more message for debug. */
-	err_setdebug(true);
+	err_setdebug(1);
 
 	/* You can using journal -n 50 to display the syslog message. */
 	err_setdaemon(true);
-	err_dbg("This is debug test");
+	err_dbg(1, "This is debug test");
 	err_msg("process %ld start to execute wiat() without any child",
 			(long)getpid());
 	if ((pid = wait(&status)) == -1)

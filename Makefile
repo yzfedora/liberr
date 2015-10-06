@@ -10,8 +10,8 @@ PROGS	:= test pression_test sigtstp_test mt_test
 # SRCS	= err_handler.c
 # OBJS	= $(SRCS:.c=.o)
 
-.PHONY: ALL clean install uninstall
-ALL: $(TARGET) $(PROGS)
+.PHONY: ALL tests clean install uninstall
+ALL: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
@@ -19,8 +19,10 @@ $(TARGET): $(OBJS)
 %.o: %.c %.h
 	$(CC) $(CFLAGS) $^
 
+tests: $(PROGS)
+
 %: %.c
-	$(CC) -o $@ $^ -Wall -lerr -lpthread -g
+	$(CC) -o $@ $^ -Wall -lerr -lpthread
 
 clean:
 	$(RM) $(TARGET) $(OBJS) $(wildcard *.h.gch) $(PROGS)

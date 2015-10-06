@@ -31,7 +31,7 @@
 #endif
 
 
-#define ERR_BUFFER	1024
+#define ERR_BUFFER	4096
 #define COLOR_RST	"\e[0m"		/* Reset color of terminal. */
 #define COLOR_RED	"\e[31m"	/* Set red font. */
 
@@ -55,7 +55,7 @@
 /* The 'x' is a macro in the one of COLOR_*. */
 #define COLOR_SET(x) (write(STDERR_FILENO, x, sizeof(x) - 1) != (sizeof(x) - 1))
 
-static int _err_debug = 0;
+static int _err_debug_level = 0;
 static int _err_daemon = 0;
 static int _err_tty = 0;
 
@@ -64,10 +64,9 @@ static int tstp_received;
 static int cont_received;
 #endif
 
-void err_setdebug(bool flags)
+void err_setdebug(int level)
 {
-	if (flags)	_err_debug = 1;
-	else		_err_debug = 0;
+	_err_debug_level = level;
 }
 
 void err_setdaemon(bool flags)
@@ -221,11 +220,13 @@ static void err_internal(bool doexit, bool doerr, int level,
 	strncat(buf + len, "\n", sizeof(buf) - len);
 	len += 1;
 
-	if (doerr && DO_COLOR_SET)
+	if (doerr && DO_COLOR_SET) {
 		strncat(buf + len, COLOR_RST, sizeof(buf) - len);
+		len += sizeof(COLOR_RST) - 1;
+	}
 
 	if (!_err_daemon)
-		fprintf(stderr, buf);
+		write(STDERR_FILENO, buf, len);
 	else
 		syslog(level, buf);
 
@@ -233,9 +234,9 @@ static void err_internal(bool doexit, bool doerr, int level,
 		exit(EXIT_FAILURE);
 }
 
-void err_dbg(const char *msg, ...)
+void err_dbg(int level, const char *msg, ...)
 {
-	if (!_err_debug)
+	if (level > _err_debug_level)
 		return;
 
 	call_err_internal(false, false, LOG_DEBUG, msg);
