@@ -1,20 +1,27 @@
 CC	:= gcc
+LD	:= ld
 CFLAGS	:= -c -fPIC -O3 -Wall
 LDFLAGS	:= -shared
-TARGET	:= liberr.so
 OBJS	:= err_handler.o
 HEADERS := err_handler.h
 PROGS	:= test pression_test sigtstp_test mt_test
+TARGET	:= liberr.so
 
 # BE CARE FOR USE THIS. NO ANY SPACE IN THE BRACKETS.
 # SRCS	= err_handler.c
 # OBJS	= $(SRCS:.c=.o)
 
+ifeq "$(M32)" "yes"
+CFLAGS	+= -m32
+LDFLAGS	+= -melf_i386
+LIBS_32	:= -L/usr/lib/gcc/x86_64-linux-gnu/5.1.1/32/ -L/usr/lib
+endif
+
 .PHONY: ALL tests clean install uninstall
 ALL: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^
+	$(LD) -o $@ $^ $(LIBS_32) $(LDFLAGS)
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) $^
