@@ -138,6 +138,9 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+liberr_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(liberr_la_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -339,6 +342,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 lib_LTLIBRARIES = liberr.la
 liberr_la_SOURCES = err_handler.c err_handler.h
+liberr_la_LDFLAGS = -shared -fPIC
 include_HEADERS = err_handler.h
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -430,7 +434,7 @@ clean-libLTLIBRARIES:
 	}
 
 liberr.la: $(liberr_la_OBJECTS) $(liberr_la_DEPENDENCIES) $(EXTRA_liberr_la_DEPENDENCIES) 
-	$(AM_V_CCLD)$(LINK) -rpath $(libdir) $(liberr_la_OBJECTS) $(liberr_la_LIBADD) $(LIBS)
+	$(AM_V_CCLD)$(liberr_la_LINK) -rpath $(libdir) $(liberr_la_OBJECTS) $(liberr_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
